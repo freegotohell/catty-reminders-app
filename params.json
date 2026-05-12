@@ -319,6 +319,11 @@
       "login": "freegotohell",
       "id": "svyatkovskaya",
       "app": "catty-reminders-app"
+    },
+    {
+      "login": "https-katice",
+      "id": "krivonosova",
+      "app": "catty-reminders-app"
     }
   ]
 }
