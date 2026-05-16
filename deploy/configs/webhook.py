@@ -1,32 +1,43 @@
-from fastapi import FastAPI, Request
+#!/usr/bin/env python3
+from flask import Flask, request
+from flask import jsonify
 import subprocess
-from pathlib import Path
+import os
 
-app = FastAPI()
+app = Flask(__name__)
 
-APP_DIR = Path("/home/lina/catty-reminders-app")
-DEPLOYREF = Path("/home/lina/catty-reminders-app/deployref")  # исправлено на Path
+APP_DIR = "/home/lina/catty-reminders-app"
+ENV_FILE = "/home/lina/catty-reminders-app/deploy/configs/.env"
+APP_SERVICE = "catty-reminders.service"
+PORT = 8080
 
-def deploy(commit_hash: str):
-    subprocess.run(["git", "-C", str(APP_DIR), "fetch", "--all"], check=False)
-    subprocess.run(["git", "-C", str(APP_DIR), "reset", "--hard", commit_hash], check=True)
-    DEPLOYREF.write_text(commit_hash, encoding="utf-8")
-    subprocess.run(["sudo", "systemctl", "restart", "catty-reminders"], check=True)
-
-@app.api_route("/", methods=["GET", "POST"])
-async def handle_webhook(request: Request):
-    if request.method == "GET":
-        current_hash = DEPLOYREF.read_text(encoding="utf-8").strip() if DEPLOYREF.exists() else "unknown"
-        return {"status": "alive", "deployref": current_hash}
+@app.route('/', methods=['GET', 'POST'])
+def handle():
+    if request.method == 'GET':
+        return jsonify({"message": "webhook handler running"}), 200
+    
+    if request.headers.get('X-GitHub-Event') == 'push':
+        data = request.json
+        commit_sha = data.get('after') if data else None
         
-    event = request.headers.get("X-GitHub-Event", "")
-    if event != "push":
-        return {"status": "ignored"}
+        if not commit_sha or commit_sha == '0000000000000000000000000000000000000000':
+            return jsonify({"message": "No valid SHA"}), 200
+            
+        print("Starting deployment...")
+        
+        subprocess.run(["git", "-C", APP_DIR, "pull"], check=True)
+        print("Code updated")
+        
+        with open(ENV_FILE, "w") as f:
+            f.write(f"DEPLOY_REF={commit_sha}")
+        print(f"DEPLOY_REF written: {commit_sha}")
+        
+        subprocess.run(["sudo", "systemctl", "restart", APP_SERVICE], check=True)
+        print("Service restarted")
+        
+        return jsonify({"message": "Deployment completed"}), 200
+        
+    return jsonify({"message": "Not a push event"}), 200
 
-    payload = await request.json()
-    commit_hash = payload.get("after")
-    if not commit_hash:
-        return {"status": "bad payload"}
-
-    deploy(commit_hash)
-    return {"status": "accepted", "deployref": commit_hash}
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=PORT)
