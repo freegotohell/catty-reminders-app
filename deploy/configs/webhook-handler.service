@@ -1,0 +1,13 @@
+[Unit]
+Description=GitHub Webhook Handler
+After=network.target
+
+[Service]
+User=lina
+WorkingDirectory=/home/lina/webhook-handler
+ExecStart=/home/lina/webhook-handler/.venv/bin/uvicorn webhook:app --host 0.0.0.0 --port 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
