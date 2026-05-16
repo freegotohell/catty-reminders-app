@@ -68,7 +68,7 @@ def webhook_listener():
             deploy_thread.daemon = True
             deploy_thread.start()
             
-            return jsonify({"message": "accepted"}), 202
+            return jsonify({"message": "accepted","hash" : new_commit}), 202
     
     return jsonify({"message": "no action"}), 200
 
