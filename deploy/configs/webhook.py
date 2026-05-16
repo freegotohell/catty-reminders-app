@@ -5,7 +5,7 @@ from pathlib import Path
 app = FastAPI()
 
 APP_DIR = Path("/home/lina/catty-reminders-app")
-DEPLOYREF = APP_DIR / "deployref"
+DEPLOYREF = "/home/lina/catty-reminders-app/deployref"
 
 def deploy(commit_hash: str):
     subprocess.run(["git", "-C", str(APP_DIR), "fetch", "--all"], check=False)
@@ -13,8 +13,11 @@ def deploy(commit_hash: str):
     DEPLOYREF.write_text(commit_hash, encoding="utf-8")
     subprocess.run(["sudo", "systemctl", "restart", "catty-reminders"], check=True)
 
-@app.post("/")
+@app.api_route("/", methods=["GET", "POST"])
 async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
+    if request.method == "GET":
+        return {"message": "Webhook service is running. Send POST requests for GitHub webhooks."}
+        
     event = request.headers.get("X-GitHub-Event", "")
     if event != "push":
         return {"status": "ignored"}
