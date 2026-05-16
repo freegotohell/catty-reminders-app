@@ -16,7 +16,8 @@ def deploy(commit_hash: str):
 @app.api_route("/", methods=["GET", "POST"])
 async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
     if request.method == "GET":
-        return {"message": "Webhook service is running. Send POST requests for GitHub webhooks."}
+        current_hash = DEPLOYREF.read_text(encoding="utf-8").strip() if DEPLOYREF.exists() else "unknown"
+        return {"status": "alive", "deployref": current_hash}
         
     event = request.headers.get("X-GitHub-Event", "")
     if event != "push":
