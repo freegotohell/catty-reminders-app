@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import FastAPI, Request
 import subprocess
 from pathlib import Path
 
 app = FastAPI()
 
 APP_DIR = Path("/home/lina/catty-reminders-app")
-DEPLOYREF = "/home/lina/catty-reminders-app/deployref"
+DEPLOYREF = Path("/home/lina/catty-reminders-app/deployref")  # исправлено на Path
 
 def deploy(commit_hash: str):
     subprocess.run(["git", "-C", str(APP_DIR), "fetch", "--all"], check=False)
@@ -14,7 +14,7 @@ def deploy(commit_hash: str):
     subprocess.run(["sudo", "systemctl", "restart", "catty-reminders"], check=True)
 
 @app.api_route("/", methods=["GET", "POST"])
-async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
+async def handle_webhook(request: Request):
     if request.method == "GET":
         current_hash = DEPLOYREF.read_text(encoding="utf-8").strip() if DEPLOYREF.exists() else "unknown"
         return {"status": "alive", "deployref": current_hash}
@@ -28,5 +28,5 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
     if not commit_hash:
         return {"status": "bad payload"}
 
-    background_tasks.add_task(deploy, commit_hash)
+    deploy(commit_hash)
     return {"status": "accepted", "deployref": commit_hash}
