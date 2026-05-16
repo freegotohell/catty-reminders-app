@@ -140,3 +140,4 @@ test EOF
 test2
 try
 try1
+try2
